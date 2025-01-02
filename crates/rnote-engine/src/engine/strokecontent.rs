@@ -9,39 +9,52 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::warn;
 
-/// Stroke content.
+/// Represents a collection of strokes with optional bounds and background.
 ///
-/// Used when exporting and pasting/copying/cutting from/into the clipboard.
+/// Used for exporting and clipboard operations.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, rename = "stroke_content")]
 pub struct StrokeContent {
+    /// The strokes contained in this `StrokeContent`.
     #[serde(rename = "strokes")]
     pub strokes: Vec<Arc<Stroke>>,
+    /// The optional bounding box of the content. If `None`, the bounds are calculated from the strokes.
     #[serde(rename = "bounds")]
     pub bounds: Option<Aabb>,
+    /// The optional background associated with the content.
     #[serde(rename = "background")]
     pub background: Option<Background>,
 }
 
 impl StrokeContent {
+    /// The MIME type used to identify `StrokeContent` data.
     pub const MIME_TYPE: &'static str = "application/rnote-stroke-content";
+    /// The margin used when exporting content to the clipboard.
     pub const CLIPBOARD_EXPORT_MARGIN: f64 = 6.0;
 
+    /// Creates a new `StrokeContent` with the specified bounds.
     pub fn with_bounds(mut self, bounds: Option<Aabb>) -> Self {
         self.bounds = bounds;
         self
     }
 
+    /// Creates a new `StrokeContent` with the specified strokes.
     pub fn with_strokes(mut self, strokes: Vec<Arc<Stroke>>) -> Self {
         self.strokes = strokes;
         self
     }
 
+    /// Creates a new `StrokeContent` with the specified background.
     pub fn with_background(mut self, background: Option<Background>) -> Self {
         self.background = background;
         self
     }
 
+    /// Calculates the bounding box of the `StrokeContent`.
+    ///
+    /// If `bounds` is `Some`, it is returned directly. Otherwise, the bounding box is calculated
+    /// by merging the bounding boxes of all strokes. Returns `None` if there are no strokes and
+    /// `bounds` is `None`.
     pub fn bounds(&self) -> Option<Aabb> {
         if self.bounds.is_some() {
             return self.bounds;
@@ -57,16 +70,26 @@ impl StrokeContent {
         )
     }
 
+    /// Returns the size of the `StrokeContent`'s bounding box, if available.
     pub fn size(&self) -> Option<na::Vector2<f64>> {
         self.bounds().map(|b| b.extents())
     }
 
-    /// Generate a Svg from the content.
+    /// Generates an SVG representation of the `StrokeContent`.
     ///
-    /// Moves the bounds to mins: [0.0, 0.0], maxs: extents.
+    /// The generated SVG will have its bounds moved to the origin (0, 0).
     ///
-    /// Returns Ok(None) if there is no content stored.
-    pub fn gen_svg(
+    /// # Arguments
+    ///
+    /// * `draw_background` - Whether to draw the background in the SVG.
+    /// * `draw_pattern` - Whether to draw the background pattern (if applicable).
+    /// * `optimize_printing` - Whether to apply optimizations for printing.
+    /// * `margin` - The margin to add around the content.
+    ///
+    /// # Returns
+    ///
+    /// An `Svg` object representing the content, or `None` if the content has no bounds.
+    pub fn generate_svg(
         &self,
         draw_background: bool,
         draw_pattern: bool,
@@ -96,6 +119,18 @@ impl StrokeContent {
         Ok(Some(svg))
     }
 
+    /// Draws the `StrokeContent` to a Cairo context.
+    ///
+    /// # Arguments
+    ///
+    /// * `cairo_cx` - The Cairo context to draw to.
+    /// * `draw_background` - Whether to draw the background.
+    /// * `draw_pattern` - Whether to draw the background pattern (if applicable).
+    /// * `optimize_printing` - Whether to apply optimizations for printing.
+    ///                           When true it draws only the darkest color of a vector stroke,
+    ///                           if the stroke is not inside of an image.
+    /// * `margin` - The margin to add around the content when drawing.
+    /// * `image_scale` - The scaling factor for images.
     pub fn draw_to_cairo(
         &self,
         cairo_cx: &cairo::Context,
