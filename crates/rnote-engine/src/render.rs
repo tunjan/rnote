@@ -22,6 +22,7 @@ pub static USVG_FONTDB: Lazy<Arc<usvg::fontdb::Database>> = Lazy::new(|| {
 });
 
 // Constants for pixel conversion and renderingpub const PX_TO_POINT_CONV_FACTOR: f64 = 96.0 / 72.0;
+pub const PX_TO_POINT_CONV_FACTOR: f64 = 96.0 / 72.0;
 pub const POINT_TO_PX_CONV_FACTOR: f64 = 72.0 / 96.0;
 pub const VIEWPORT_EXTENTS_MARGIN_FACTOR: f64 = 0.4;
 pub const BYTES_PER_PIXEL: u32 = 4;
