@@ -21,16 +21,10 @@ pub static USVG_FONTDB: Lazy<Arc<usvg::fontdb::Database>> = Lazy::new(|| {
     Arc::new(db)
 });
 
-/// Px unit (96 DPI ) to Point unit ( 72 DPI ) conversion factor.
-pub const PX_TO_POINT_CONV_FACTOR: f64 = 96.0 / 72.0;
-/// Point unit ( 72 DPI ) to Px unit (96 DPI ) conversion factor.
+// Constants for pixel conversion and renderingpub const PX_TO_POINT_CONV_FACTOR: f64 = 96.0 / 72.0;
 pub const POINT_TO_PX_CONV_FACTOR: f64 = 72.0 / 96.0;
-/// The factor for which the rendering for the current viewport is extended by.
-/// For example:: 1.0 means the viewport is extended by its own extents on all sides.
-///
-/// Used when checking rendering for new zooms or a moved viewport.
-/// There is a trade off: a larger value will consume more memory, a smaller value will mean more stuttering on zooms and when moving the view.
 pub const VIEWPORT_EXTENTS_MARGIN_FACTOR: f64 = 0.4;
+pub const BYTES_PER_PIXEL: u32 = 4;
 
 #[non_exhaustive]
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -192,12 +186,15 @@ impl Image {
     pub fn assert_valid(&self) -> anyhow::Result<()> {
         self.rect.bounds().assert_valid()?;
 
+        let expected_data_len = self.pixel_width * self.pixel_height * BYTES_PER_PIXEL;
         if self.pixel_width == 0
             || self.pixel_height == 0
-            || self.data.len() as u32 != 4 * self.pixel_width * self.pixel_height
+            || self.data.len() as u32 != expected_data_len
         {
             Err(anyhow::anyhow!(
-                "Asserting image validity failed, invalid size or data."
+                "Asserting image validity failed, invalid size or data. Expected data length: {}, actual: {}",
+                expected_data_len,
+                self.data.len()
             ))
         } else {
             Ok(())
